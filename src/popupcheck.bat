@@ -1,7 +1,7 @@
-:: Checking if the popup window work
+:: Quick batch file to check if the popup works
 
 @echo off
-:: --- Insert this section at the start of your script ---
+:: Create the popup window
 set "VBS_FILE=%temp%\warning_temp_%random%.vbs"
 
 echo x=MsgBox("This script contains malicious content, run at your own risk. The author has no responsibility of your damage.", 48 + 4, "Warning") > "%VBS_FILE%"
@@ -13,7 +13,6 @@ if errorlevel 1 goto :Abort
 :: Clean up the temporary VBS file
 del "%VBS_FILE%" >nul 2>&1
 
-:: --- Add this label at the end of your script ---
 :Abort
 echo Operation cancelled by user. Exiting.
 pause
