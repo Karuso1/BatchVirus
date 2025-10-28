@@ -1,0 +1,58 @@
+name: Integrity Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          mkdir -p .integrity
+
+      - name: Compute SHA256 checksums
+        run: |
+          find . -type f -name "*.bat" -exec sha256sum {} \; | sort > .integrity/current.txt
+
+      - name: Compare with previous checksums
+        id: compare
+        run: |
+          if [ -f .integrity/previous.txt ]; then
+            diff .integrity/previous.txt .integrity/current.txt > .integrity/diff.txt || true
+            if [ -s .integrity/diff.txt ]; then
+              echo "Mismatch detected between previous and current checksums."
+              echo "Differences:"
+              cat .integrity/diff.txt
+              echo "result=fail" >> $GITHUB_OUTPUT
+            else
+              echo "result=pass" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No previous checksum found. Generating baseline."
+            echo "result=baseline" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Save new baseline
+        if: steps.compare.outputs.result == 'baseline' || steps.compare.outputs.result == 'pass'
+        run: |
+          cp .integrity/current.txt .integrity/previous.txt
+
+      - name: Upload integrity logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrity-logs
+          path: .integrity/
+
+      - name: Fail if integrity mismatch
+        if: steps.compare.outputs.result == 'fail'
+        run: |
+          echo "Integrity check failed. One or more batch files were modified unexpectedly."
+          exit 1
