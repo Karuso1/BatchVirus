@@ -1,0 +1,31 @@
+name: Batch Safety Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-batch:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan batch files for dangerous commands
+        run: |
+          echo Scanning .bat files for dangerous commands...
+          $files = Get-ChildItem -Path . -Filter *.bat -Recurse
+          $dangerous = @("format", "del /f", "rd /s", "shutdown", "cipher", "reg delete", "net user")
+          $fail = $false
+          foreach ($file in $files) {
+            $content = Get-Content $file.FullName
+            foreach ($word in $dangerous) {
+              if ($content -match $word) {
+                Write-Host "Dangerous command found in $($file.FullName): $word"
+                $fail = $true
+              }
+            }
+          }
+          if ($fail) { exit 1 } else { Write-Host "No dangerous commands detected." }
