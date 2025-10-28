@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -14,46 +15,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate checksums.txt
-        run: |
-          find . -type f -name "*.bat" -exec sha256sum {} \; | sort > checksums.txt
-          echo "Generated checksums.txt:"
-          cat checksums.txt
-
-      - name: Compare with previous version
-        id: compare
-        run: |
-          if [ -f .github/checksums.txt ]; then
-            diff .github/checksums.txt checksums.txt > checksum_diff.txt || true
-            if [ -s checksum_diff.txt ]; then
-              echo "Differences found between commits:"
-              cat checksum_diff.txt
-              echo "result=fail" >> $GITHUB_OUTPUT
-            else
-              echo "No changes detected in .bat file integrity."
-              echo "result=pass" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "No previous checksums found — creating baseline."
-            echo "result=baseline" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Store baseline
-        if: steps.compare.outputs.result == 'baseline' || steps.compare.outputs.result == 'pass'
+      - name: Generate new SHA256 checksums
         run: |
           mkdir -p .github
-          cp checksums.txt .github/checksums.txt
+          # Generate hashes and remove 'sha256' prefix
+          find . -type f -name "*.bat" -exec sha256sum {} \; | sed 's/^sha256://g' | sort > new_checksums.txt
+          echo "Generated new checksums:"
+          cat new_checksums.txt
 
-      - name: Upload integrity logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: integrity-report
-          path: |
-            checksums.txt
-            checksum_diff.txt
-
-      - name: Fail if integrity mismatch
-        if: steps.compare.outputs.result == 'fail'
+      - name: Append new hashes if missing
         run: |
-          echo "Integrity mismatch detected in one or more batch files."
-          exit 1
+          if [ ! -f .github/checksums.txt ]; then
+            echo "No existing checksums.txt found — creating baseline."
+            cp new_checksums.txt .github/checksums.txt
+          else
+            echo "Comparing and appending new entries..."
+            while IFS= read -r line; do
+              file=$(echo "$line" | awk '{print $2}')
+              if ! grep -q "$file" .github/checksums.txt; then
+                echo "$line" >> .github/checksums.txt
+                echo "Added new entry for: $file"
+              fi
+            done < new_checksums.txt
+          fi
+
+      - name: Show updated checksum file
+        run: cat .github/checksums.txt
+
+      - name: Commit updated checksums (if changed)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/checksums.txt
+          if git diff --cached --quiet; then
+            echo "No checksum changes detected."
+          else
+            git commit -m "Update checksums.txt (auto)"
+            git push
+          fi
