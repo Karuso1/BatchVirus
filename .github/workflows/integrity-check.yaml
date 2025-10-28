@@ -14,45 +14,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up environment
+      - name: Generate checksums.txt
         run: |
-          mkdir -p .integrity
+          find . -type f -name "*.bat" -exec sha256sum {} \; | sort > checksums.txt
+          echo "Generated checksums.txt:"
+          cat checksums.txt
 
-      - name: Compute SHA256 checksums
-        run: |
-          find . -type f -name "*.bat" -exec sha256sum {} \; | sort > .integrity/current.txt
-
-      - name: Compare with previous checksums
+      - name: Compare with previous version
         id: compare
         run: |
-          if [ -f .integrity/previous.txt ]; then
-            diff .integrity/previous.txt .integrity/current.txt > .integrity/diff.txt || true
-            if [ -s .integrity/diff.txt ]; then
-              echo "Mismatch detected between previous and current checksums."
-              echo "Differences:"
-              cat .integrity/diff.txt
+          if [ -f .github/checksums.txt ]; then
+            diff .github/checksums.txt checksums.txt > checksum_diff.txt || true
+            if [ -s checksum_diff.txt ]; then
+              echo "Differences found between commits:"
+              cat checksum_diff.txt
               echo "result=fail" >> $GITHUB_OUTPUT
             else
+              echo "No changes detected in .bat file integrity."
               echo "result=pass" >> $GITHUB_OUTPUT
             fi
           else
-            echo "No previous checksum found. Generating baseline."
+            echo "No previous checksums found — creating baseline."
             echo "result=baseline" >> $GITHUB_OUTPUT
-          fi
 
-      - name: Save new baseline
+      - name: Store baseline
         if: steps.compare.outputs.result == 'baseline' || steps.compare.outputs.result == 'pass'
         run: |
-          cp .integrity/current.txt .integrity/previous.txt
+          mkdir -p .github
+          cp checksums.txt .github/checksums.txt
 
       - name: Upload integrity logs
         uses: actions/upload-artifact@v4
         with:
-          name: integrity-logs
-          path: .integrity/
+          name: integrity-report
+          path: |
+            checksums.txt
+            checksum_diff.txt
 
       - name: Fail if integrity mismatch
         if: steps.compare.outputs.result == 'fail'
         run: |
-          echo "Integrity check failed. One or more batch files were modified unexpectedly."
+          echo "Integrity mismatch detected in one or more batch files."
           exit 1
