@@ -1,5 +1,8 @@
 name: Integrity Check
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main ]
@@ -18,23 +21,33 @@ jobs:
       - name: Generate new SHA256 checksums
         run: |
           mkdir -p .github
-          # Generate hashes and remove 'sha256' prefix
+          # Generate hashes and remove 'sha256:' prefix
           find . -type f -name "*.bat" -exec sha256sum {} \; | sed 's/^sha256://g' | sort > new_checksums.txt
           echo "Generated new checksums:"
           cat new_checksums.txt
 
-      - name: Append new hashes if missing
+      - name: Sync checksums file (add new + remove deleted)
         run: |
           if [ ! -f .github/checksums.txt ]; then
             echo "No existing checksums.txt found — creating baseline."
             cp new_checksums.txt .github/checksums.txt
           else
-            echo "Comparing and appending new entries..."
+            echo "Syncing existing checksums..."
+            # Remove entries for deleted .bat files
+            while IFS= read -r line; do
+              file=$(echo "$line" | awk '{print $2}')
+              if [ ! -f "$file" ]; then
+                echo "Removing stale entry: $file"
+                grep -v " $file$" .github/checksums.txt > .github/checksums.tmp && mv .github/checksums.tmp .github/checksums.txt
+              fi
+            done < .github/checksums.txt
+
+            # Add new entries for newly added .bat files
             while IFS= read -r line; do
               file=$(echo "$line" | awk '{print $2}')
               if ! grep -q "$file" .github/checksums.txt; then
                 echo "$line" >> .github/checksums.txt
-                echo "Added new entry for: $file"
+                echo "Added new entry: $file"
               fi
             done < new_checksums.txt
           fi
@@ -50,6 +63,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No checksum changes detected."
           else
-            git commit -m "Update checksums.txt (auto)"
+            git commit -m "Auto-update checksums.txt"
             git push
           fi
