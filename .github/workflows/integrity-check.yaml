@@ -36,6 +36,7 @@ jobs:
           else
             echo "No previous checksums found — creating baseline."
             echo "result=baseline" >> $GITHUB_OUTPUT
+          fi
 
       - name: Store baseline
         if: steps.compare.outputs.result == 'baseline' || steps.compare.outputs.result == 'pass'
