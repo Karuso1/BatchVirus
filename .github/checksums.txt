@@ -1,0 +1,2 @@
+c6ce7b221efd7537f3d09ae141a648f76110334d6f5ad3399f397f6e9ff5b97e  ./src/virus.bat
+fb1ba7de8ba617e125bf8b4704296e40a214fa5447265bb07cbaa4b9ec339c83  ./src/popupcheck.bat
