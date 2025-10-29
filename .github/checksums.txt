@@ -1,2 +1,3 @@
 c6ce7b221efd7537f3d09ae141a648f76110334d6f5ad3399f397f6e9ff5b97e  ./src/virus.bat
 fb1ba7de8ba617e125bf8b4704296e40a214fa5447265bb07cbaa4b9ec339c83  ./src/popupcheck.bat
+ebb8c80d5a92b6e8694087caffc2b70adf800b18c21802ef4fb41afe983e73e1  ./examples/registry_read_demo.bat
