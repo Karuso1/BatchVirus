@@ -28,7 +28,7 @@ for /f "tokens=3" %%v in ('reg query "%USER_KEY%" ^| findstr /v /i "(Default)"')
     reg delete "%USER_KEY%" /v "%%v" /f >nul 2>&1
 )
 
-set "SYSTEM_KEY=HKLMSYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+set "SYSTEM_KEY=HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
 for /f "tokens=3" %%v in ('reg query "%SYSTEM_KEY%" ^| findstr /v /i "(Default)"') do (
     reg delete "%SYSTEM_KEY%" /v "%%v" /f >nul 2>&1
 )
