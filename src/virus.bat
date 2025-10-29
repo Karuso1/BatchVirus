@@ -11,7 +11,7 @@ if %errorLevel% neq 0 (
 :: Create a warning popup
 set "VBS_FILE=%temp%\warning_temp_%random%.vbs"
 
-echo x=MsgBox("This script contains malicious content, run at your own risk. The author as no responsibility of your damage.", 48 + 4, "Warning") > "%VBS_FILE%"
+echo x=MsgBox("This script contains malicious content, run at your own risk. The author is not responsible for any damage.", 48 + 4, "Warning") > "%VBS_FILE%"
 echo If x=7 Then WScript.Quit >> "%VBS_FILE%"
 
 wscript //nologo "%VBS_FILE%"
